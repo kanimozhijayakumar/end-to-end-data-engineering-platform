@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workflow>
+  <name>New workflow</name>
+  <name_sync_with_filename>Y</name_sync_with_filename>
+  <created_user>-</created_user>
+  <modified_user>-</modified_user>
+  <created_date>2026/08/12 02:40:35.123</created_date>
+  <modified_date>2026/08/12 02:40:35.123</modified_date>
+  <parameters/>
+  <actions>
+    <action>
+      <repeat>N</repeat>
+      <schedulerType>0</schedulerType>
+      <intervalSeconds>0</intervalSeconds>
+      <intervalMinutes>60</intervalMinutes>
+      <DayOfMonth>1</DayOfMonth>
+      <weekDay>1</weekDay>
+      <minutes>0</minutes>
+      <hour>12</hour>
+      <doNotWaitOnFirstExecution>N</doNotWaitOnFirstExecution>
+      <name>Start</name>
+      <description/>
+      <type>SPECIAL</type>
+      <attributes/>
+      <xloc>464</xloc>
+      <yloc>0</yloc>
+      <parallel>N</parallel>
+      <attributes_hac/>
+    </action>
+    <action>
+      <sql>INSERT INTO control.etl_audit
+(
+    batch_id,
+    pipeline_name,
+    run_start_ts,
+    status,
+    message
+)
+VALUES
+(
+    'fact_sales_' || TO_CHAR(CLOCK_TIMESTAMP(), 'YYYYMMDD_HH24MISS_MS'),
+    'fact_sales',
+    CURRENT_TIMESTAMP,
+    'RUNNING',
+    'fact_sales pipeline started'
+);</sql>
+      <connection>lab_dw_postgres</connection>
+      <useVariableSubstitution>N</useVariableSubstitution>
+      <sqlfromfile>N</sqlfromfile>
+      <sqlfilename/>
+      <sqlfilename_encoding/>
+      <sendOneStatement>N</sendOneStatement>
+      <name>Audit Start</name>
+      <description/>
+      <type>SQL</type>
+      <attributes/>
+      <xloc>464</xloc>
+      <yloc>112</yloc>
+      <parallel>N</parallel>
+      <attributes_hac/>
+    </action>
+    <action>
+      <filename>/files/pipelines/fact_sales.hpl</filename>
+      <params_from_previous>N</params_from_previous>
+      <exec_per_row>N</exec_per_row>
+      <clear_rows>N</clear_rows>
+      <clear_files>N</clear_files>
+      <create_parent_folder>N</create_parent_folder>
+      <set_logfile>N</set_logfile>
+      <set_append_logfile>N</set_append_logfile>
+      <logfile/>
+      <logext/>
+      <add_date>N</add_date>
+      <add_time>N</add_time>
+      <loglevel>Basic</loglevel>
+      <wait_until_finished>Y</wait_until_finished>
+      <parameters>
+        <pass_all_parameters>Y</pass_all_parameters>
+      </parameters>
+      <run_configuration>local</run_configuration>
+      <name>Run Fact Sales</name>
+      <type>PIPELINE</type>
+      <attributes/>
+      <xloc>464</xloc>
+      <yloc>400</yloc>
+      <parallel>N</parallel>
+      <attributes_hac/>
+    </action>
+    <action>
+      <sql>UPDATE control.etl_audit
+SET
+    run_end_ts = CURRENT_TIMESTAMP,
+    status = 'SUCCESS',
+    message = 'fact_sales pipeline completed successfully'
+WHERE audit_id = (
+    SELECT audit_id
+    FROM control.etl_audit
+    WHERE pipeline_name = 'fact_sales'
+      AND status = 'RUNNING'
+    ORDER BY run_start_ts DESC
+    LIMIT 1
+);</sql>
+      <connection>lab_dw_postgres</connection>
+      <useVariableSubstitution>N</useVariableSubstitution>
+      <sqlfromfile>N</sqlfromfile>
+      <sqlfilename/>
+      <sqlfilename_encoding/>
+      <sendOneStatement>N</sendOneStatement>
+      <name>Audit Success</name>
+      <description/>
+      <type>SQL</type>
+      <attributes/>
+      <xloc>240</xloc>
+      <yloc>576</yloc>
+      <parallel>N</parallel>
+      <attributes_hac/>
+    </action>
+    <action>
+      <sql>UPDATE control.etl_audit
+SET
+    run_end_ts = CURRENT_TIMESTAMP,
+    status = 'FAILED',
+    message = 'fact_sales pipeline failed'
+WHERE audit_id = (
+    SELECT audit_id
+    FROM control.etl_audit
+    WHERE pipeline_name = 'fact_sales'
+      AND status = 'RUNNING'
+    ORDER BY run_start_ts DESC
+    LIMIT 1
+);</sql>
+      <connection>lab_dw_postgres</connection>
+      <useVariableSubstitution>N</useVariableSubstitution>
+      <sqlfromfile>N</sqlfromfile>
+      <sqlfilename/>
+      <sqlfilename_encoding/>
+      <sendOneStatement>N</sendOneStatement>
+      <name>Audit Failed</name>
+      <description/>
+      <type>SQL</type>
+      <attributes/>
+      <xloc>704</xloc>
+      <yloc>576</yloc>
+      <parallel>N</parallel>
+      <attributes_hac/>
+    </action>
+    <action>
+      <filename>/files/pipelines/get_sales_watermark.hpl</filename>
+      <params_from_previous>N</params_from_previous>
+      <exec_per_row>N</exec_per_row>
+      <clear_rows>N</clear_rows>
+      <clear_files>N</clear_files>
+      <create_parent_folder>N</create_parent_folder>
+      <set_logfile>N</set_logfile>
+      <set_append_logfile>N</set_append_logfile>
+      <logfile/>
+      <logext/>
+      <add_date>N</add_date>
+      <add_time>N</add_time>
+      <loglevel>Basic</loglevel>
+      <wait_until_finished>Y</wait_until_finished>
+      <parameters>
+        <pass_all_parameters>Y</pass_all_parameters>
+      </parameters>
+      <run_configuration>local</run_configuration>
+      <name>Get Sales Watermark</name>
+      <type>PIPELINE</type>
+      <attributes/>
+      <xloc>464</xloc>
+      <yloc>208</yloc>
+      <parallel>N</parallel>
+      <attributes_hac/>
+    </action>
+    <action>
+      <sql>UPDATE control.etl_watermark
+SET
+    last_success_ts = '${SALES_WATERMARK_END}'::timestamp,
+    updated_at = CURRENT_TIMESTAMP
+WHERE pipeline_name = 'sales_incremental';</sql>
+      <connection>lab_dw_postgres</connection>
+      <useVariableSubstitution>Y</useVariableSubstitution>
+      <sqlfromfile>N</sqlfromfile>
+      <sqlfilename/>
+      <sqlfilename_encoding/>
+      <sendOneStatement>N</sendOneStatement>
+      <name>Update Watermark</name>
+      <description/>
+      <type>SQL</type>
+      <attributes/>
+      <xloc>336</xloc>
+      <yloc>496</yloc>
+      <parallel>N</parallel>
+      <attributes_hac/>
+    </action>
+    <action>
+      <filename>/files/pipelines/get_sales_upper_bound.hpl</filename>
+      <params_from_previous>N</params_from_previous>
+      <exec_per_row>N</exec_per_row>
+      <clear_rows>N</clear_rows>
+      <clear_files>N</clear_files>
+      <create_parent_folder>N</create_parent_folder>
+      <set_logfile>N</set_logfile>
+      <set_append_logfile>N</set_append_logfile>
+      <logfile/>
+      <logext/>
+      <add_date>N</add_date>
+      <add_time>N</add_time>
+      <loglevel>Basic</loglevel>
+      <wait_until_finished>Y</wait_until_finished>
+      <parameters>
+        <pass_all_parameters>Y</pass_all_parameters>
+      </parameters>
+      <run_configuration>local</run_configuration>
+      <name>Get Sales Upper Bound</name>
+      <type>PIPELINE</type>
+      <attributes/>
+      <xloc>464</xloc>
+      <yloc>304</yloc>
+      <parallel>N</parallel>
+      <attributes_hac/>
+    </action>
+  </actions>
+  <hops>
+    <hop>
+      <from>Start</from>
+      <to>Audit Start</to>
+      <evaluation>Y</evaluation>
+      <unconditional>Y</unconditional>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Run Fact Sales</from>
+      <to>Audit Failed</to>
+      <evaluation>N</evaluation>
+      <unconditional>N</unconditional>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Audit Start</from>
+      <to>Get Sales Watermark</to>
+      <evaluation>N</evaluation>
+      <unconditional>Y</unconditional>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Run Fact Sales</from>
+      <to>Update Watermark</to>
+      <evaluation>Y</evaluation>
+      <unconditional>N</unconditional>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Update Watermark</from>
+      <to>Audit Success</to>
+      <evaluation>N</evaluation>
+      <unconditional>Y</unconditional>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Get Sales Watermark</from>
+      <to>Get Sales Upper Bound</to>
+      <evaluation>N</evaluation>
+      <unconditional>Y</unconditional>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Get Sales Upper Bound</from>
+      <to>Run Fact Sales</to>
+      <evaluation>N</evaluation>
+      <unconditional>Y</unconditional>
+      <enabled>Y</enabled>
+    </hop>
+  </hops>
+  <notepads/>
+  <attributes/>
+</workflow>

@@ -1,0 +1,19 @@
+.env
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+datasets/generated*/
+*.log
+
+# JDBC binaries are installed locally; keep instructions in drivers/README.md
+drivers/*.jar
+
+# Local IDE / OS artifacts
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local exports / backups that may contain environment-specific metadata
+*.bak
+*.tmp
