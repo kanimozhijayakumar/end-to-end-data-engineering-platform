@@ -8,6 +8,8 @@ The project goes beyond moving data from A to B: it demonstrates dimensional mod
 
 ## Architecture
 
+![End-to-End Data Engineering Platform Architecture](docs/images/architecture.png)
+
 ```text
                         Retail Data Platform
 
